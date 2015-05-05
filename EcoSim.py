@@ -56,7 +56,7 @@ class EcoSim(object):
 		#self._worldHistory += (self._worldHistory[-1],)
 
 		# Get the displacement matrix
-		deltaN = self.getFlux()
+		deltaN = self.getDisplacements()
 
 		# Calculate the new population matrix
 		newWorld = self._worldHistory[-1] + deltaN
@@ -66,29 +66,29 @@ class EcoSim(object):
 
 		self.show()
 
-	# Method to calculate the fluxes at each node...
+	# Method to calculate the displacements at each node...
 	# Currently one individual moves one node to the right each step.
-	# The grid is bounded so flux out is always zerp.
+	# The grid is bounded so flux out is always zero.
 	# choose something more complex later...
-	def getFlux(self):
+	def getDisplacements(self):
 
-		flux = np.zeros((self._numRows, self._numColumns),
+		displacements = np.zeros((self._numRows, self._numColumns),
 		 dtype=np.int)
 
-		# Move the individuals away from the col = numColumns edge
+		# Move the individuals away from the col = 0 edge
 		for row in range(0, (self._numRows - 1)):
 			for col in range(0, (self._numColumns - 1)):
 
 				if(self._worldHistory[-1][row, col] > 0):
 
 					# Change in N at the node
-					flux[row, col] += -1
+					displacements[row, col] += -1
 
 					# Flux in the positive X direction
-					flux[row, col + 1] += 1
+					displacements[row, col + 1] += 1
 
 		
-		return flux
+		return displacements
 
 
 
