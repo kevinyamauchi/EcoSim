@@ -4,14 +4,14 @@ import random
 
 class EcoSim(object):
 
-	def __init__(self, numRows, numColumns, initPop, maxSeedPerNode = 1):
+	def __init__(self, numRows, numColumns, initPop):
 
 		
 		# Save the ecoysystem parameters
 		self._numRows = numRows
 		self._numColumns = numColumns
 		self._initPop = initPop
-		self._maxSeedPerNode = maxSeedPerNode
+		#self._maxSeedPerNode = maxSeedPerNode
 		self._stepNum = 0
 
 		self._numParams = 3
@@ -28,6 +28,7 @@ class EcoSim(object):
 
 
 		# Display the ecosystem
+		print ("Step: ") + str(self._stepNum)
 		self.show()
 
 	def step(self):
@@ -45,6 +46,9 @@ class EcoSim(object):
 
 		# Iterate through the animals
 		for ind in animalIndices:
+
+			self._worldHistory[-1][ind]['age'] +=1
+			self._worldHistory[-1][ind]['time'] +=1
 			
 			roll = random.randint(0, 3)
 
@@ -67,6 +71,8 @@ class EcoSim(object):
 	def __call__(self):
 
 		self.step() 
+
+		return self._worldHistory[-1]
 
 
 
@@ -239,8 +245,14 @@ class EcoSim(object):
 
 if __name__ == '__main__':
 
-	myWorld = EcoSim(5, 5, 4)
+	numRows = 5
+	numCols = 3
+	initPop = 3
 
-	for index in range(0,10):
-		myWorld()
+	myWorld = EcoSim(numRows, numCols, initPop)
+
+	history = [myWorld() for _ in range(10)]
+
+	print history[9]
+		
 
