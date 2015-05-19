@@ -1,5 +1,5 @@
 import numpy as np
-from random import randint
+import random
 
 
 class EcoSim(object):
@@ -14,34 +14,17 @@ class EcoSim(object):
 		self._maxSeedPerNode = maxSeedPerNode
 		self._stepNum = 0
 
-		# Initialize the world...
-		self._worldHistory = (np.zeros((self._numRows, self._numColumns),
-		 dtype=np.int),)
+		self._numParams = 3
 
 
-		# Populate the world
-		remainingOrgs = self._initPop
+		# Get a list of the nodes to get an animal (random draw, no replacement)
+		allNodes = range(self._numRows * self._numColumns)
+		nodesToSeed = random.sample(allNodes, self._initPop)
 
-		while(remainingOrgs):
-
-			# Get the number of organisms to add to the node
-			if ((self._maxSeedPerNode * remainingOrgs) <= 2):
-				orgsToAdd = remainingOrgs
-
-			else:
-				orgsToAdd = np.random.randint(0, self._maxSeedPerNode * remainingOrgs)
-
-			#print(orgsToAdd, remainingOrgs)
-
-			# Add the orgs to a random node
-			row = np.random.randint(0, (self._numRows - 1))
-			col = np.random.randint(0, (self._numColumns - 1))
-
-			#print(row, col)
-
-			self._worldHistory[-1][row, col] += orgsToAdd
-
-			remainingOrgs -= orgsToAdd
+		# Initialize the world
+		self._worldHistory = [[{'index': x, 'time': 0, 'age': self._initialAge(),
+			'row': self._getRow(nodesToSeed[x]),
+			'col': self._getCol(nodesToSeed[x])} for x in range(self._initPop)],]
 
 
 		# Display the ecosystem
@@ -53,43 +36,32 @@ class EcoSim(object):
 		print("Step " + str(self._stepNum))
 
 		# Make the matrix for the next step
-		#self._worldHistory += (self._worldHistory[-1],)
+		self._worldHistory += (self._worldHistory[-1],)
 
-		# Get the displacement matrix
-		deltaN = self.getDisplacements()
+		# Generate a list of indices in random order to make moves
+		animalIndices = range(len(self._worldHistory[-1]))
+		random.shuffle(animalIndices)
 
-		# Calculate the new population matrix
-		newWorld = self._worldHistory[-1] + deltaN
 
-		# Add the step to the history
-		self._worldHistory += (newWorld,)
+		# Iterate through the animals
+		for ind in animalIndices:
+			
+			roll = random.randint(0, 3)
+
+			if(roll == 0):
+				self._moveUp(ind)
+
+			elif(roll == 1):
+				self._moveRight(ind)
+
+			elif(roll == 2):
+				self._moveDown(ind)
+
+			elif(roll == 3):
+				self._moveLeft(ind)
+
 
 		self.show()
-
-	# Method to calculate the displacements at each node...
-	# Currently one individual moves one node to the right each step.
-	# The grid is bounded so flux out is always zero.
-	# choose something more complex later...
-	def getDisplacements(self):
-
-		displacements = np.zeros((self._numRows, self._numColumns),
-		 dtype=np.int)
-
-		# Move the individuals away from the col = 0 edge
-		for row in range(0, (self._numRows - 1)):
-			for col in range(0, (self._numColumns - 1)):
-
-				if(self._worldHistory[-1][row, col] > 0):
-
-					# Change in N at the node
-					displacements[row, col] += -1
-
-					# Flux in the positive X direction
-					displacements[row, col + 1] += 1
-
-		
-		return displacements
-
 
 
 	def __call__(self):
@@ -102,15 +74,25 @@ class EcoSim(object):
 	# are the numer of individuals at that node
 	def show(self):
 
+		currentState = np.zeros((self._numRows, self._numColumns), 
+			dtype = np.int)
+
+		for animal in self._worldHistory[-1]:
+
+			row = animal['row']
+			col = animal['col']
+
+			currentState[row, col] = 1
+
 		for row in range(self._numRows - 1):
 
 			# Print a row of organisms
 			for col in range(self._numColumns - 1):
 
-				print(self._worldHistory[-1][row, col]),
+				print(currentState[row, col]),
 				print("-"),
 
-			print(self._worldHistory[-1][row, -1])
+			print(currentState[row, -1])
 
 			# Print the vertial links
 			for col in range(self._numColumns - 1):
@@ -121,16 +103,143 @@ class EcoSim(object):
 		# Print the last row of organisms
 		for col in range(self._numColumns - 1):
 
-			print(self._worldHistory[-1][-1, col]),
+			print(currentState[-1, col]),
 			print("-"),
 
-		print(self._worldHistory[-1][-1, -1])
+		print(currentState[-1, -1])
+
+
+	# Method to get the row number from an index
+	def _getRow(self, index):
+
+		return index // self._numColumns
+
+	# Method to get the col number from an index
+	def _getCol(self, index):
+
+		return index % self._numColumns
+
+	# Method to set intiial age of an organism. All organisms are newborn for now.
+	# Can add function later.
+	def _initialAge(self):
+
+		return 0
+
+	# Method to check if any of the animals in the current step are in 
+	# the specified position (returns True if occupied)
+	def _isOccupied(self, row, col):
+
+		occupied  = False
+
+		for animal in self._worldHistory[-1]:
+
+			if ((animal['row'] == row) & (animal['col'] == col)):
+
+				occupied = True
+
+				break
+
+
+		return occupied
+
+	# Method to move up
+	def _moveUp(self, animalIndex):
+
+		newRow = self._worldHistory[-1][animalIndex]['row'] - 1
+
+		newCol = self._worldHistory[-1][animalIndex]['col']
+
+		# Don't move and return false if in the top row already
+		if(newRow < 0):
+			return False
+
+		# Don't move and return false if the space is occupied
+		elif(self._isOccupied(newRow, newCol)):
+			return False
+
+		# Move up if no reason not to
+		else:
+
+			self._worldHistory[-1][animalIndex]['row'] = newRow
+			self._worldHistory[-1][animalIndex]['col'] = newCol
+
+			return True
+
+	# Method to move down
+	def _moveDown(self, animalIndex):
+
+		newRow = self._worldHistory[-1][animalIndex]['row'] + 1
+
+		newCol = self._worldHistory[-1][animalIndex]['col']
+
+		# Don't move and return false if in the bottom row already
+		if(newRow > (self._numRows - 1)):
+			return False
+
+		# Don't move and return false if the space is occupied
+		elif(self._isOccupied(newRow, newCol)):
+			return False
+
+		# Move up if no reason not to
+		else:
+
+			self._worldHistory[-1][animalIndex]['row'] = newRow
+			self._worldHistory[-1][animalIndex]['col'] = newCol
+
+			return True
+
+	# Method to move right
+	def _moveRight(self, animalIndex):
+
+		newRow = self._worldHistory[-1][animalIndex]['row']
+
+		newCol = self._worldHistory[-1][animalIndex]['col'] + 1
+
+		# Don't move and return false if in the rightest row already
+		if(newCol > (self._numColumns - 1)):
+			return False
+
+		# Don't move and return false if the space is occupied
+		elif(self._isOccupied(newRow, newCol)):
+			return False
+
+		# Move up if no reason not to
+		else:
+
+			self._worldHistory[-1][animalIndex]['row'] = newRow
+			self._worldHistory[-1][animalIndex]['col'] = newCol
+
+			return True
+
+	# Method to move Left
+	def _moveLeft(self, animalIndex):
+
+		newRow = self._worldHistory[-1][animalIndex]['row']
+
+		newCol = self._worldHistory[-1][animalIndex]['col'] - 1
+
+		# Don't move and return false if in the leftest
+		if(newCol < 0):
+			return False
+
+		# Don't move and return false if the space is occupied
+		elif(self._isOccupied(newRow, newCol)):
+			return False
+
+		# Move up if no reason not to
+		else:
+
+			self._worldHistory[-1][animalIndex]['row'] = newRow
+			self._worldHistory[-1][animalIndex]['col'] = newCol
+
+			return True
+
 
 
 
 if __name__ == '__main__':
 
-	myWorld = EcoSim(5, 5, 20, 0.3)
+	myWorld = EcoSim(5, 5, 4)
 
 	for index in range(0,10):
 		myWorld()
